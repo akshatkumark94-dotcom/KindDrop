@@ -16,26 +16,34 @@ class DonationService {
 
   String get _geminiApiKey => dotenv.env['GEMINI_API_KEY'] ?? '';
 
-  Future<String?> uploadDonationImage(dynamic imageFile) async {
+  Future<String?> uploadDonationImage(dynamic imageInput) async {
     try {
       final user = _auth.currentUser;
       if (user == null) return null;
 
-      String fileName;
-      if (kIsWeb) {
-        fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
-      } else {
-        fileName = '${DateTime.now().millisecondsSinceEpoch}${p.extension((imageFile as io.File).path)}';
-      }
-
+      String fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
       final ref = _storage.ref().child('donations/${user.uid}/$fileName');
 
       if (kIsWeb) {
-        // Handle web upload (Uint8List)
-        final uploadTask = await ref.putData(imageFile as Uint8List);
+        // Ensure imageInput is Uint8List for web
+        if (imageInput is! Uint8List) {
+           debugPrint('Error: Web upload requires Uint8List');
+           return null;
+        }
+        final uploadTask = await ref.putData(
+          imageInput,
+          SettableMetadata(contentType: 'image/jpeg'),
+        );
         return await uploadTask.ref.getDownloadURL();
       } else {
-        final uploadTask = await ref.putFile(imageFile as io.File);
+        // Handle mobile XFile or File
+        io.File file;
+        if (imageInput is XFile) {
+          file = io.File(imageInput.path);
+        } else {
+          file = imageInput as io.File;
+        }
+        final uploadTask = await ref.putFile(file);
         return await uploadTask.ref.getDownloadURL();
       }
     } catch (e) {

@@ -384,8 +384,8 @@ class _DonationFormScreenState extends State<DonationFormScreen> {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(40),
-          child: _image != null
-              ? Image.file(_image!, fit: BoxFit.cover)
+          child: _imageBytes != null
+              ? Image.memory(_imageBytes!, fit: BoxFit.cover)
               : Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

@@ -143,7 +143,8 @@ class _ChatAssistantScreenState extends State<ChatAssistantScreen> {
         final bytes = await image.readAsBytes();
         _imageUrl = await _donationService.uploadDonationImage(bytes);
       } else {
-        _imageUrl = await _donationService.uploadDonationImage(io.File(image.path));
+        // Safe because this block only runs on mobile
+        _imageUrl = await _donationService.uploadDonationImage(image);
       }
     } catch (e) {
       debugPrint("Background processing error: $e");

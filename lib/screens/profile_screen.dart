@@ -38,17 +38,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         imageQuality: 80,
       );
       if (pickedFile != null) {
-        if (kIsWeb) {
-          final bytes = await pickedFile.readAsBytes();
-          setState(() {
-            _webImage = bytes;
-            _imageFile = pickedFile;
-          });
-        } else {
-          setState(() {
-            _imageFile = pickedFile;
-          });
-        }
+        final bytes = await pickedFile.readAsBytes();
+        setState(() {
+          _webImage = bytes;
+          _imageFile = pickedFile;
+        });
       }
     } catch (e) {
       debugPrint("Error picking image: $e");
@@ -174,12 +168,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           shape: BoxShape.circle,
                           image: _webImage != null
                               ? DecorationImage(image: MemoryImage(_webImage!), fit: BoxFit.cover)
-                              : (_imageFile != null && !kIsWeb
-                                  ? DecorationImage(image: FileImage(io.File(_imageFile!.path)), fit: BoxFit.cover)
-                                  : const DecorationImage(
-                                      image: NetworkImage('https://img.freepik.com/free-vector/businessman-character-avatar-isolated_24877-60111.jpg'),
-                                      fit: BoxFit.cover,
-                                    )),
+                              : const DecorationImage(
+                                  image: NetworkImage('https://img.freepik.com/free-vector/businessman-character-avatar-isolated_24877-60111.jpg'),
+                                  fit: BoxFit.cover,
+                                ),
                         ),
                       ),
                     ),
