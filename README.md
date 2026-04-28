@@ -1,7 +1,7 @@
 # 🍱 AI-Powered Smart Food Donation System
 
 > Bridging the gap between surplus food and NGOs through AI-driven food validation, smart donation matching, and seamless user interaction.
-
+ 
 ## 📌 Overview
 
 The **AI-Powered Smart Food Donation System** is a mobile application designed to reduce food wastage and improve food redistribution by connecting donors directly with NGOs in real time.
