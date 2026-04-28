@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
+// Conditional import for geocoding
+import 'package:geocoding/geocoding.dart' if (dart.library.html) 'web_geocoding_stub.dart';
 
 class LocationService {
   /// Determine the current position of the device.
@@ -25,11 +27,17 @@ class LocationService {
           'Location permissions are permanently denied, we cannot request permissions.');
     }
 
-    return await Geolocator.getCurrentPosition();
+    // On web, use a specific accuracy if needed
+    return await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high
+    );
   }
 
   /// Get the address from coordinates
   static Future<String> getAddressFromLatLng(Position position) async {
+    if (kIsWeb) {
+      return "${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}";
+    }
     try {
       List<Placemark> placemarks = await placemarkFromCoordinates(
         position.latitude,

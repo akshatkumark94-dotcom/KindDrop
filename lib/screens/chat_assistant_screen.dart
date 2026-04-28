@@ -1,6 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+import 'dart:io' if (dart.library.html) 'dart:html' as io;
 import '../services/donation_service.dart';
 import 'finding_ngo_screen.dart';
 
@@ -27,6 +28,9 @@ class _ChatAssistantScreenState extends State<ChatAssistantScreen> {
   String? _imageUrl;
   double? _safetyScore;
 
+  XFile? _imageFile;
+  Uint8List? _webImage;
+
   final Color primaryColor = const Color(0xFF146D40);
   final Color onSurfaceColor = const Color(0xFF2D3432);
   final Color onSurfaceVariantColor = const Color(0xFF59615F);
@@ -35,7 +39,7 @@ class _ChatAssistantScreenState extends State<ChatAssistantScreen> {
   final Color botIconBgColor = const Color(0xFFA1F5BC);
 
   final List<String> quickOptions = ['Cooked Meal', 'Raw Ingredients', 'Fruits/Veg', 'Canned Food'];
-
+// ... (omitting some unchanged methods for brevity, using full replacement logic)
   @override
   void initState() {
     super.initState();
@@ -85,8 +89,6 @@ class _ChatAssistantScreenState extends State<ChatAssistantScreen> {
 
       _addBotMessage(response['text']);
 
-      // Simple heuristic state extraction from AI text or explicit intents if needed
-      // In a real app, the AI JSON would be used to populate _foodType, etc.
       _updateDonationState(text, response);
 
     } catch (e) {
@@ -119,14 +121,12 @@ class _ChatAssistantScreenState extends State<ChatAssistantScreen> {
 
   Future<void> _pickAndAnalyzeImage() async {
     final picker = ImagePicker();
-    // Using gallery for the demo image upload
     final image = await picker.pickImage(source: ImageSource.gallery);
 
     if (image == null) return;
 
     _addUserMessage("Analyzing photo...");
 
-    // IMMEDIATELY set the pre-defined details so they show up instantly
     setState(() {
       _isLoading = true;
       _foodType = "Catering Spread (Samosas, Pav, Rice, Curries, Gulab Jamun)";
@@ -139,8 +139,12 @@ class _ChatAssistantScreenState extends State<ChatAssistantScreen> {
         "Analysis complete: I detected a full catering spread including Samosas, Pav Bhaji, Vegetable Biryani, Manchurian, and Gulab Jamun. Total quantity is approximately 35kg across 18 trays. Safety Score: 9.5/10. Does this look correct?");
 
     try {
-      // Background upload - we don't wait for AI analysis anymore as requested
-      _imageUrl = await _donationService.uploadDonationImage(File(image.path));
+      if (kIsWeb) {
+        final bytes = await image.readAsBytes();
+        _imageUrl = await _donationService.uploadDonationImage(bytes);
+      } else {
+        _imageUrl = await _donationService.uploadDonationImage(io.File(image.path));
+      }
     } catch (e) {
       debugPrint("Background processing error: $e");
     } finally {

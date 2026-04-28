@@ -1,7 +1,8 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/donation_service.dart';
+// No dart:io here at all
 
 import 'finding_ngo_screen.dart';
 
@@ -15,7 +16,8 @@ class DonationFormScreen extends StatefulWidget {
 class _DonationFormScreenState extends State<DonationFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _donationService = DonationService();
-  File? _image;
+  XFile? _imageFile;
+  Uint8List? _imageBytes;
   final _picker = ImagePicker();
   final _notesController = TextEditingController();
   bool _isSubmitting = false;
@@ -42,11 +44,13 @@ class _DonationFormScreenState extends State<DonationFormScreen> {
         imageQuality: 85,
       );
       if (pickedFile != null) {
+        final bytes = await pickedFile.readAsBytes();
         setState(() {
-          _image = File(pickedFile.path);
+          _imageFile = pickedFile;
+          _imageBytes = bytes;
           _isSubmitting = true;
 
-          // IMMEDIATELY set the catering spread details as requested
+          // IMMEDIATELY set the catering spread details
           _foodType = "Catering Spread (Samosas, Pav, Rice, Curries)";
           _quantity = "18 Large Trays (Approx. 35kg)";
           _freshness = "Freshly Prepared / Catering Grade";
@@ -63,7 +67,7 @@ class _DonationFormScreenState extends State<DonationFormScreen> {
   }
 
   Future<void> _submitDonation() async {
-    if (_image == null) {
+    if (_imageFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please upload an image first')),
       );
@@ -73,8 +77,12 @@ class _DonationFormScreenState extends State<DonationFormScreen> {
     setState(() => _isSubmitting = true);
     try {
       String? imageUrl;
-      if (_image != null) {
-        imageUrl = await _donationService.uploadDonationImage(_image!);
+      // Pass the XFile or Bytes to the service
+      if (kIsWeb) {
+        imageUrl = await _donationService.uploadDonationImage(_imageBytes);
+      } else {
+        // Use a dynamic approach in the service
+        imageUrl = await _donationService.uploadDonationImage(_imageFile);
       }
 
       final donationId = await _donationService.createDonation(

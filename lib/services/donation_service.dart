@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,6 +6,8 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:convert';
 import 'package:path/path.dart' as p;
+// Use conditional import or check kIsWeb
+import 'dart:io' if (dart.library.html) 'dart:html' as io;
 
 class DonationService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -15,17 +16,28 @@ class DonationService {
 
   String get _geminiApiKey => dotenv.env['GEMINI_API_KEY'] ?? '';
 
-  Future<String?> uploadDonationImage(File imageFile) async {
+  Future<String?> uploadDonationImage(dynamic imageFile) async {
     try {
       final user = _auth.currentUser;
       if (user == null) return null;
 
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}${p.extension(imageFile.path)}';
+      String fileName;
+      if (kIsWeb) {
+        fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+      } else {
+        fileName = '${DateTime.now().millisecondsSinceEpoch}${p.extension((imageFile as io.File).path)}';
+      }
+
       final ref = _storage.ref().child('donations/${user.uid}/$fileName');
 
-      final uploadTask = await ref.putFile(imageFile);
-      final downloadUrl = await uploadTask.ref.getDownloadURL();
-      return downloadUrl;
+      if (kIsWeb) {
+        // Handle web upload (Uint8List)
+        final uploadTask = await ref.putData(imageFile as Uint8List);
+        return await uploadTask.ref.getDownloadURL();
+      } else {
+        final uploadTask = await ref.putFile(imageFile as io.File);
+        return await uploadTask.ref.getDownloadURL();
+      }
     } catch (e) {
       debugPrint('Error uploading image: $e');
       return null;
@@ -86,9 +98,9 @@ class DonationService {
   }
 
   // Client-side Gemini Analysis
-  Future<Map<String, dynamic>> analyzeImage(String imagePath) async {
+  Future<Map<String, dynamic>> analyzeImage(dynamic imageInput) async {
     try {
-      debugPrint('Starting client-side AI analysis for image: $imagePath');
+      debugPrint('Starting client-side AI analysis');
 
       final model = GenerativeModel(
         model: 'gemini-1.5-flash',
@@ -96,12 +108,17 @@ class DonationService {
         generationConfig: GenerationConfig(responseMimeType: 'application/json'),
       );
 
-      final imageFile = File(imagePath);
-      if (!await imageFile.exists()) {
-        throw Exception('Image file not found at $imagePath');
+      Uint8List imageBytes;
+      if (kIsWeb) {
+        imageBytes = imageInput as Uint8List;
+      } else {
+        final imageFile = io.File(imageInput as String);
+        if (!await imageFile.exists()) {
+          throw Exception('Image file not found at $imageInput');
+        }
+        imageBytes = await imageFile.readAsBytes();
       }
 
-      final imageBytes = await imageFile.readAsBytes();
       final content = [
         Content.multi([
           TextPart(

@@ -1,8 +1,9 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/user_service.dart';
 import 'home_screen.dart';
+import 'dart:io' if (dart.library.html) 'dart:html' as io;
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -18,7 +19,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
 
-  File? _image;
+  XFile? _imageFile;
+  Uint8List? _webImage;
   final _picker = ImagePicker();
 
   final Color primaryColor = const Color(0xFF146D40);
@@ -36,9 +38,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
         imageQuality: 80,
       );
       if (pickedFile != null) {
-        setState(() {
-          _image = File(pickedFile.path);
-        });
+        if (kIsWeb) {
+          final bytes = await pickedFile.readAsBytes();
+          setState(() {
+            _webImage = bytes;
+            _imageFile = pickedFile;
+          });
+        } else {
+          setState(() {
+            _imageFile = pickedFile;
+          });
+        }
       }
     } catch (e) {
       debugPrint("Error picking image: $e");
@@ -95,7 +105,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     try {
       // In a real app, you'd upload the image to Firebase Storage first
-      // and get a URL. For now, we'll pass null or a placeholder.
+      // For now passing null as in the original code
       await _userService.saveUserProfile(
         name: _nameController.text.trim(),
         email: _emailController.text.trim(),
@@ -162,12 +172,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         decoration: BoxDecoration(
                           color: inputBgColor,
                           shape: BoxShape.circle,
-                          image: _image != null
-                              ? DecorationImage(image: FileImage(_image!), fit: BoxFit.cover)
-                              : const DecorationImage(
-                                  image: NetworkImage('https://img.freepik.com/free-vector/businessman-character-avatar-isolated_24877-60111.jpg'),
-                                  fit: BoxFit.cover,
-                                ),
+                          image: _webImage != null
+                              ? DecorationImage(image: MemoryImage(_webImage!), fit: BoxFit.cover)
+                              : (_imageFile != null && !kIsWeb
+                                  ? DecorationImage(image: FileImage(io.File(_imageFile!.path)), fit: BoxFit.cover)
+                                  : const DecorationImage(
+                                      image: NetworkImage('https://img.freepik.com/free-vector/businessman-character-avatar-isolated_24877-60111.jpg'),
+                                      fit: BoxFit.cover,
+                                    )),
                         ),
                       ),
                     ),
